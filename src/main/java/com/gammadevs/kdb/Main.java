@@ -1,7 +1,7 @@
 package com.gammadevs.kdb;
 
 import com.gammadevs.kdb.dao.KdbDao;
-import com.gammadevs.kdb.dao.KdbDaoImpl;
+import com.gammadevs.kdb.dao.KdbDaoSimpleImpl;
 import com.gammadevs.kdb.dao.StockDataDao;
 import com.gammadevs.kdb.dao.StockDataDaoImpl;
 import kx.c;
@@ -33,7 +33,7 @@ public class Main {
         c kdbConnection = null;
         try {
             kdbConnection = new c(host, port);
-            KdbDao kdbDao = new KdbDaoImpl(kdbConnection);
+            KdbDao kdbDao = new KdbDaoSimpleImpl(kdbConnection);
             StockDataDao stockDataDao = new StockDataDaoImpl();
             for (String symbol : symbols) {
                 kdbDao.save(stockDataDao.getHistory(symbol, start, end));

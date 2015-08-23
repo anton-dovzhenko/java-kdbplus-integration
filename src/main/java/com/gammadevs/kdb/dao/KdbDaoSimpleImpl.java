@@ -13,14 +13,14 @@ import java.util.Map;
 /**
  * Created by anton on 7/8/15.
  */
-public class KdbDaoImpl implements KdbDao {
+public class KdbDaoSimpleImpl implements KdbDao {
 
     private final String kdbDateFormat = "yyyy.MM.dd";
     private final c kdbConnection;
     private final String[] historicalQuoteColNames =
             {"date", "symbol", "open", "low", "high", "close", "adjClose", "volume"};
 
-    public KdbDaoImpl(c kdbConnection) {
+    public KdbDaoSimpleImpl(c kdbConnection) {
         this.kdbConnection = kdbConnection;
     }
 
@@ -54,16 +54,9 @@ public class KdbDaoImpl implements KdbDao {
     @Override
     public Map<String, Double> getVwaps(Date start, Date end, String ... symbols)
             throws IOException, c.KException {
-        String query = "select volume wavg adjClose by symbol from trades where ";
-        query += "(date >= " + getKdbDate(start) + ")";
-        query += "& (date <= " + getKdbDate(end) + ")";
-        if (symbols.length > 0) {
-            query += " & (symbol in ";
-            for (String symbol : symbols) {
-                query += "`" + symbol;
-            }
-            query += ")";
-        }
+        String query = "select volume wavg adjClose by symbol from trades where 1=1 ";
+        query += getDateClause(start, end);
+        query += getSymbolClause(symbols);
         c.Dict resultSet = (c.Dict) kdbConnection.k(query);
         String[] smbls = (String[]) ((c.Flip) resultSet.x).y[0];
         double[] vwaps = (double[]) ((c.Flip) resultSet.y).y[0];
@@ -74,6 +67,43 @@ public class KdbDaoImpl implements KdbDao {
         }
         return result;
     }
+
+    @Override
+    public Map<String, Double> getMaxAdjClose(Date start, Date end, String ... symbols)
+            throws IOException, c.KException {
+        String query = "select max(adjClose) by symbol from trades where 1=1 ";
+        query += getDateClause(start, end);
+        query += getSymbolClause(symbols);
+        c.Dict resultSet = (c.Dict) kdbConnection.k(query);
+        String[] smbls = (String[]) ((c.Flip) resultSet.x).y[0];
+        double[] maxAdjCloses = (double[]) ((c.Flip) resultSet.y).y[0];
+        assert smbls.length == maxAdjCloses.length;
+        Map<String, Double> result = new HashMap<>();
+        for (int i = 0; i < smbls.length; i++) {
+            result.put(smbls[i], maxAdjCloses[i]);
+        }
+        return result;
+    }
+
+    protected String getSymbolClause(String ... symbols) {
+        String query = "";
+        if (symbols.length > 0) {
+            query += " & (symbol in ";
+            for (String symbol : symbols) {
+                query += "`" + symbol;
+            }
+            query += ")";
+        }
+        return query;
+    }
+
+    protected String getDateClause(Date start, Date end) {
+        String query = "";
+        query += " & (date >= " + getKdbDate(start) + ")";
+        query += " & (date <= " + getKdbDate(end) + ")";
+        return query;
+    }
+
 
     protected String getKdbDate(Date date) {
         return new SimpleDateFormat(kdbDateFormat).format(date);
